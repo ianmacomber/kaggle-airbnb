@@ -20,11 +20,12 @@ These files can be found through the website and are stored in a `/Data` folder 
 * `Sessions Overview.py` - contains a general overview of just the sessions data
 * `users_data_clean.py` - cleans the user data and turns it into `clean_test_users.csv` and `clean_train_users.csv`
 * `sessions_feature_extraction.hql` - file TBD, cleans the sessions table to turn it into user level variables that can be used.  Generates `tbltestsessionstmp4.csv` which may certainly have a new name in the future.
-* `Ensemble2.py` - current best implimentation
+* `user_model.py` - This is a model containing ALL of the train user data, but none of the session user data.  The training set has 213,451 rows and 18 columns, spanning a longer time period.
+* `session_user_model.py` - This is a model containing ALL of the session level data, but only a subset of the user data.  The training set has 73,815 rows and 65 columns.  This is my current best implimentation.
 
 ## Current State
 
-Score of 0.87758 using variations of random and extra tree classifiers.
+Score of ~~0.87758~~ 0.87782 using variations of random and extra tree classifiers.
 Only using the subset of training data that has corresponding session level data.
 
 ## To-do
@@ -35,3 +36,6 @@ Only using the subset of training data that has corresponding session level data
 * Look at other classification methods (SVM, KNN)
 * Improve feature engineering, especially of session-level data
 * Investigate seasonal trends.  Test set is only July-Sept
+* Confusion matrix
+* When do user models make different predictions?
+* Ensemble of models

@@ -10,18 +10,19 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-# First stab at an ensemble model
+# First stab at a model for the user data and session logs
 
 # Set the current working directory
 os.chdir('/Users/ianmacomber/Kaggle Airbnb')
 
+# Bring in the test users data, train users data, session aggregates data.
 test_users = pd.read_table('Data/clean_test_users.csv', sep=',')
 train_users = pd.read_table('Data/clean_train_users.csv', sep=',')
 session_aggregates = pd.read_table('Data/tbltestsessionstmp4.csv', header=-1)
 
-print(test_users.shape)
-print(train_users.shape)
-print(session_aggregates.shape)
+print(test_users.shape)         # (62096, 17)
+print(train_users.shape)        # (213451, 18)
+print(session_aggregates.shape) # (135484, 47)
 
 session_aggregates.columns = [
 'user_id',
@@ -160,7 +161,6 @@ abc.best_params_
 abc.best_score_ # 0.68198875567296624
 '''
 
-
 etc = GridSearchCV(ExtraTreesClassifier(random_state=79), cv=4, verbose=2, n_jobs=-1,
                   param_grid={"n_estimators": [600, 700],
                               "max_features": [33], # This can't go above the total features
@@ -171,10 +171,8 @@ etc = GridSearchCV(ExtraTreesClassifier(random_state=79), cv=4, verbose=2, n_job
 etc.best_params_ # {'bootstrap': True, 'max_features': 33, 'min_samples_split': 30, 'n_estimators': 600}
 etc.best_score_ # 69279956648377705
 
-
-
-
 # This is pretty well dialed in
+# Update as of 1/12, hasn't been re-dialed in with separating age
 rfc = RandomForestClassifier(n_estimators=450, max_features=20, min_samples_split=30, random_state=79)
 abc = AdaBoostClassifier(DecisionTreeClassifier(max_depth=23), learning_rate=0.1, n_estimators=400)
 etc = ExtraTreesClassifier(min_samples_split=35, max_features=30, n_estimators=500, random_state=79)   
