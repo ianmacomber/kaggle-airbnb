@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,9 +12,12 @@ from sklearn.tree import DecisionTreeClassifier
 
 # First stab at an ensemble model
 
-test_users = pd.read_table('/Users/ianmacomber/Python Work/Kaggle/Airbnb/Data/clean_test_users.csv', sep=',')
-train_users = pd.read_table('/Users/ianmacomber/Python Work/Kaggle/Airbnb/Data/clean_train_users.csv', sep=',')
-session_aggregates = pd.read_table('/Users/ianmacomber/Python Work/Kaggle/Airbnb/Data/tbltestsessionstmp4.csv', header=-1)
+# Set the current working directory
+os.chdir('/Users/ianmacomber/Kaggle Airbnb')
+
+test_users = pd.read_table('Data/clean_test_users.csv', sep=',')
+train_users = pd.read_table('Data/clean_train_users.csv', sep=',')
+session_aggregates = pd.read_table('Data/tbltestsessionstmp4.csv', header=-1)
 
 print(test_users.shape)
 print(train_users.shape)
@@ -129,8 +133,8 @@ rfc = GridSearchCV(RandomForestClassifier(random_state=79), cv=4, verbose=2, n_j
                               "max_features": [16, 20, 24] # This can't go above the total features.pr
                               })
 
-rfc.best_params_ # {'max_features': 20, 'min_samples_split': 30, 'n_estimators': 450}
-rfc.best_score_ # 0.69815078236130867
+rfc.best_params_ # {'max_features': 20, 'min_samples_split': 34, 'n_estimators': 450}
+rfc.best_score_ # 0.69945133103027834
 '''
 
 # Generally 10 min a fit
@@ -226,12 +230,12 @@ submission['country'] = np.concatenate((classes, missingclasses))
 submission['rfc_prob'] = np.concatenate((rfc_predictions, missingclassvalues))
 submission['abc_prob'] = np.concatenate((abc_predictions, missingclassvalues))
 submission['etc_prob'] = np.concatenate((etc_predictions, missingclassvalues))
-submission['prob'] = submission['rfc_prob']*2 + submission['etc_prob'] # Something very weird with abc
+submission['prob'] = submission['rfc_prob'] # + submission['etc_prob'] # Something very weird with abc
 
 submission['prob'] = submission['etc_prob']
 
 submission = submission.sort_values(['id', 'prob'], ascending=[True, False])
-submission[['id', 'country']].to_csv('airbnb_sessions_ensemble.csv', index=False)
+submission[['id', 'country']].to_csv('Data/airbnb_sessions_ensemble.csv', index=False)
 
 submission.shape
 

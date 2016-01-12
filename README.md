@@ -34,3 +34,4 @@ Only using the subset of training data that has corresponding session level data
 * Check out xgboost.
 * Look at other classification methods (SVM, KNN)
 * Improve feature engineering, especially of session-level data
+* Investigate seasonal trends.  Test set is only July-Sept

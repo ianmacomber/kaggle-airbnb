@@ -17,18 +17,17 @@ In the test set, you will predict all the new users with first activities after 
 In the sessions dataset, the data only dates back to 1/1/2014, while the users dataset dates back to 2010. 
 '''
 
+import os
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.grid_search import GridSearchCV
-from sklearn import preprocessing
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import RandomForestClassifier
 
-test_users = pd.read_table('/Users/ianmacomber/Python Work/Kaggle/Airbnb/Data/test_users.csv', sep=',')
-train_users = pd.read_table('/Users/ianmacomber/Python Work/Kaggle/Airbnb/Data/train_users_2.csv', sep=',')
+# Set the current working directory
+os.chdir('/Users/ianmacomber/Kaggle Airbnb')
 
-# Gender -- make things only Male or Female randomly -- actually, let's make this 
+test_users = pd.read_table('Data/test_users.csv', sep=',')
+train_users = pd.read_table('Data/train_users.csv', sep=',')
+
+# Gender -- make things only Male or Female randomly -- actually, let's let this include unknowns.
 '''
 i = 0
 def get_gender(gender):
@@ -49,19 +48,22 @@ def get_gender(gender):
 train_users['gender'] = train_users['gender'].apply(get_gender)
 test_users['gender'] = test_users['gender'].apply(get_gender)
 
-# Age is fucked up
+# Age is messed up.  Some people entered the year they were born.
 def age_cleaner(x):
     if x <= 150:
         return x
-    elif x > 150 and x < 1995:
+    elif x > 150 and x < 2000:
         return 2014-x
     else:
         return np.nan
 
 train_users['age'] = train_users['age'].apply(lambda x: age_cleaner(x))
 test_users['age'] = test_users['age'].apply(lambda x: age_cleaner(x))
-train_users['age'] = train_users['age'].fillna(train_users['age'].median())
-test_users['age'] = test_users['age'].fillna(train_users['age'].median())
+# train_users['age'] = train_users['age'].fillna(train_users['age'].median())  # Fill NAs with median?
+# test_users['age'] = test_users['age'].fillna(train_users['age'].median())    # Fill NAs with median?
+train_users['age'] = train_users['age'].fillna(-1)  # Fill NAs with -1?
+test_users['age'] = test_users['age'].fillna(-1)    # Fill NAs with -1?
+
 
 # Only wrinkle for signup_method is that test_users have a google one with very few.  Gonna make these basic.
 def signup_method_cleaner(x):
@@ -174,8 +176,8 @@ test_users['weekday_first_active'] = test_users['timestamp_first_active'].apply(
 train_users.drop(['timestamp_first_active'], axis=1,inplace=True)
 test_users.drop(['timestamp_first_active'], axis=1,inplace=True)
 
-print(train_users.shape)
-print(test_users.shape)
+print(train_users.shape)  # (213451, 18)
+print(test_users.shape)   # (62096, 17)
 print(train_users.dtypes)
 print(test_users.dtypes)
 
@@ -187,6 +189,14 @@ collist.remove('country_destination')
 # This gives me all of the top values in a group
 for i in collist:
     print(train_users.groupby([i])[i].count().sort_values(ascending=False).head(30))
+
+for i in collist:
+    print(test_users.groupby([i])[i].count().sort_values(ascending=False).head(30))
+
+# month_first_active  # Seasonal effects, only bookings from July to September.
+# 7    21696
+# 8    21626
+# 9    18774
 
 # This gives me all of the items in my training set not in the test set
 for i in collist:
@@ -201,66 +211,6 @@ for i in collist:
            print(i, n, np.in1d(n, train_users[i].unique()))
 '''
 
-X = train_users[collist]
-y = train_users['country_destination']
-X_test = test_users[collist]
-
 # Write these to .csv
-train_users.to_csv('/Users/ianmacomber/Python Work/Kaggle/Airbnb/Data/clean_train_users.csv', index=False)
-test_users.to_csv('/Users/ianmacomber/Python Work/Kaggle/Airbnb/Data/clean_test_users.csv', index=False)
-
-# This is all secondary, just testing out models.
-
-for f in X.columns:
-    if X[f].dtype=='object':
-        lbl = preprocessing.LabelEncoder()
-        if f not in X_test.columns:
-            lbl.fit(np.unique(list(X[f].values)))
-            X[f] = lbl.transform(list(X[f].values))
-        else:
-            lbl.fit(np.unique(list(X[f].values) + list(X_test[f].values)))
-            X[f] = lbl.transform(list(X[f].values))
-            X_test[f] = lbl.transform(list(X_test[f].values))
-
-# Running a random forest classifier
-rfc = RandomForestClassifier(n_estimators=200, max_features=6, min_samples_split=9)
-
-rfc = GridSearchCV(RandomForestClassifier(), cv=4, verbose=2, n_jobs=-1,
-                  param_grid={"n_estimators": [200],
-                              "min_samples_split": [8,9],
-                              "max_features": [5, 6] # This can't go above the total features.pr
-                              })
-
-rfc.fit(X, y)
-
-rfc.best_params_ # {'max_features': 6, 'min_samples_split': 9, 'n_estimators': 200}
-
-zip(X.columns, rfc.feature_importances_)
-
-predictions = rfc.predict_proba(X_test)
-
-# Put these in a good form to spit out
-predictions = predictions.ravel()
-classes = np.tile(rfc.classes_, X_test.shape[0])
-ids = np.repeat(test_users["id"].values, 12)
-
-print(predictions.shape)
-print(classes.shape)
-print(ids.shape)
-
-submission = pd.DataFrame()
-
-submission['id'] = ids
-submission['country'] = classes
-submission['prob'] = predictions
-
-submission = submission.sort_values(['id', 'prob'], ascending=[True, False])
-submission[['id', 'country']].to_csv('airbnb.csv', index=False)
-
-# This gets me to .929!  Leader is .933.
-# Next ideas -- insure that NDF booking has the most likely things behind it and doublecheck.
-# Use ravel or something like that for better query submission etc.
-# Start generating query level session metrics
-# Look at other classfiers, ensemble methods
-# Keep tuning random forest classifier? -- Probably not this, it's close to good.
-
+train_users.to_csv('Data/clean_train_users.csv', index=False)
+test_users.to_csv('Data/clean_test_users.csv', index=False)
