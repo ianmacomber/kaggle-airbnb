@@ -22,20 +22,27 @@ These files can be found through the website and are stored in a `/Data` folder 
 * `sessions_feature_extraction.hql` - file TBD, cleans the sessions table to turn it into user level variables that can be used.  Generates `tbltestsessionstmp4.csv` which may certainly have a new name in the future.
 * `user_model.py` - This is a model containing ALL of the train user data, but none of the session user data.  The training set has 213,451 rows and 18 columns, spanning a longer time period.
 * `session_user_model.py` - This is a model containing ALL of the session level data, but only a subset of the user data.  The training set has 73,815 rows and 65 columns.  This is my current best implimentation.
+* `session_user_model_xgboost.py` - This is a model using the xgboost package.
 
 ## Current State
 
 Score of ~~0.87758~~ 0.87782 using variations of random and extra tree classifiers.
 Only using the subset of training data that has corresponding session level data.
 
+Score of 0.85620 using random tree classifiers for the entire data set (no session level)
+
 ## To-do
 
-* Incorporate a model that doesn't use session level data, so I can use the whole training set.
+* ~~Incorporate a model that doesn't use session level data, so I can use the whole training set~~
 * Try to cross validate using NDCG as a score.  Currently using default score.
-* Check out xgboost.
-* Look at other classification methods (SVM, KNN)
+* ~~Check out xgboost~~.
+* Look at other classification methods (SVC, KNN)
 * Improve feature engineering, especially of session-level data
-* Investigate seasonal trends.  Test set is only July-Sept
+* Investigate seasonal trends.  Test set is only July-Sept.
 * Confusion matrix
 * When do user models make different predictions?
 * Ensemble of models
+* Best test set of train data?  Maybe instead of CV, use a smart choice of specific split to incorporate session and non-session level training data?  
+We don't really care if a model does a good job of predicting non-session data, we are only prediction on session data.
+* Combine old data with new data using left outer join instead of inner, then setting to min?
+* ~~Investigate log-loss as a score?~~

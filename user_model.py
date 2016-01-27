@@ -44,13 +44,13 @@ for f in X.columns:
             
 
 rfc = GridSearchCV(RandomForestClassifier(random_state=79), cv=4, verbose=2, n_jobs=-1,
-                  param_grid={"n_estimators": [400, 500],
-                              "min_samples_split": [26, 34],
-                              "max_features": [16, 24] # This can't go above the total features.pr
+                  param_grid={"n_estimators": [400, 450],
+                              "min_samples_split": [10, 12, 14],
+                              "max_features": [10, 12] # max_features must be in (0, n_features]
                               })
 
-rfc.best_params_ # 
-rfc.best_score_ #
+rfc.best_params_ # {'max_features': 12, 'min_samples_split': 10, 'n_estimators': 400}
+rfc.best_score_ # 0.79942000740216723 # 0.57566842038688038 ??
 
 
 # Generally 10 min a fit
@@ -88,7 +88,7 @@ etc.best_params_ # {'bootstrap': True, 'max_features': 33, 'min_samples_split': 
 etc.best_score_ # 
 
 # This is not dialed in at all
-rfc = RandomForestClassifier(n_estimators=450, max_features=20, min_samples_split=30, random_state=79)
+rfc = RandomForestClassifier(n_estimators=400, max_features=12, min_samples_split=10, random_state=79)
 abc = AdaBoostClassifier(DecisionTreeClassifier(max_depth=23), learning_rate=0.1, n_estimators=400)
 etc = ExtraTreesClassifier(min_samples_split=35, max_features=30, n_estimators=500, random_state=79)   
 
@@ -115,7 +115,7 @@ etc_predictions = etc_predictions.ravel()
 classes = np.tile(rfc.classes_, X_test.shape[0])
 ids = np.repeat(test["id"].values, 12)
 
-print(rfc_predictions.shape)
+print(rfc_predictions.shape) #(745152,)
 print(abc_predictions.shape)
 print(etc_predictions.shape)
 print(classes.shape)
@@ -125,25 +125,16 @@ print(test['id'].shape)
 
 submission = pd.DataFrame()
 
-submission['id'] = np.concatenate((ids, missinguser_ids))
-submission['country'] = np.concatenate((classes, missingclasses))
-submission['rfc_prob'] = np.concatenate((rfc_predictions, missingclassvalues))
-submission['abc_prob'] = np.concatenate((abc_predictions, missingclassvalues))
-submission['etc_prob'] = np.concatenate((etc_predictions, missingclassvalues))
+submission['id'] = ids
+submission['country'] = classes
+submission['rfc_prob'] = rfc_predictions
+submission['abc_prob'] = abc_predictions
+submission['etc_prob'] = etc_predictions
 submission['prob'] = submission['rfc_prob'] # + submission['etc_prob'] # Something very weird with abc
 
 submission['prob'] = submission['etc_prob']
 
 submission = submission.sort_values(['id', 'prob'], ascending=[True, False])
-submission[['id', 'country']].to_csv('Data/airbnb_sessions_ensemble.csv', index=False)
+submission[['id', 'country']].to_csv('Data/airbnb_visits_only.csv', index=False)
 
-submission.shape
-
-# Next steps
-# Look through sessions data, see if I'm missing anything
-# Confusion matrix?
-# See where one model prefers something over another model
-# Test different techniques for the missing sessions data
-# Clean up some of the age stuff and other variables?
-
-
+submission.shape # (745152, 4)

@@ -3,13 +3,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.grid_search import GridSearchCV
+import xgboost as xgb
+from xgboost.sklearn import XGBClassifier
 from sklearn import preprocessing
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import log_loss
 
 # First stab at a model for the user data and session logs
 
@@ -128,94 +124,72 @@ for f in X.columns:
             lbl.fit(np.unique(list(X[f].values) + list(X_test[f].values)))
             X[f] = lbl.transform(list(X[f].values))
             X_test[f] = lbl.transform(list(X_test[f].values))
-'''
-rfc = GridSearchCV(RandomForestClassifier(random_state=79), cv=4, verbose=2, n_jobs=-1,
-                  param_grid={"n_estimators": [450, 500],
-                              "min_samples_split": [26, 30, 34],
-                              "max_features": [16, 20, 24] # This can't go above the total features.pr
-                              })
 
-rfc.best_params_ # {'max_features': 20, 'min_samples_split': 34, 'n_estimators': 450}
-rfc.best_score_ # 0.69945133103027834
-'''
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.metrics import make_scorer
+
+def dcg_score(y_true, y_score, k=5):
+
+    order = np.argsort(y_score)[::-1]
+    y_true = np.take(y_true, order[:k])
+
+    gain = 2 ** y_true - 1
+
+    discounts = np.log2(np.arange(len(y_true)) + 2)
+    return np.sum(gain / discounts)
+
+def ndcg_score(ground_truth, predictions, k=5):
+
+    lb = LabelBinarizer()
+    T = lb.fit_transform(ground_truth)
+
+    scores = []
+
+    # Iterate over each y_true and compute the DCG score
+    for y_true, y_score in zip(T, predictions):
+        actual = dcg_score(y_true, y_score, k)
+        best = dcg_score(y_true, y_true, k)
+        score = float(actual) / float(best)
+        scores.append(score)
+
+    return np.mean(scores)
+
+# NDCG Scorer function
+ndcg_scorer = make_scorer(ndcg_score, needs_proba=True)
+
+xgb = GridSearchCV(
+    XGBClassifier(),
+    param_grid={
+        'max_depth': [6, 20],
+        'n_estimators': [25, 50],
+        'learning_rate': [0.1, 0.2]
+    },
+    cv=5,
+    verbose=3,
+    n_jobs=-1,
+    #scoring=make_scorer(ndcg_scorer)
+    scoring=ndcg_scorer
+    )
+
+xgb.best_params_ # {{'learning_rate': 0.1, 'max_depth': 6, 'n_estimators': 25}
+xgb.best_score_ # 0.84468693734080902
+
+xgb = XGBClassifier(max_depth=6, learning_rate=0.3, n_estimators=25,
+                    objective='multi:softprob', subsample=0.5, colsample_bytree=0.5, seed=0)  
+
+xgb.fit(X, y)
+xgb_predictions = xgb.predict_proba(X_test)
 
 
-# Testing log-loss as a scoring option
-rfc = GridSearchCV(RandomForestClassifier(random_state=79), cv=4, verbose=2, n_jobs=-1, scoring='log_loss',
-                  param_grid={"n_estimators": [450, 500],
-                              "min_samples_split": [26, 30, 34],
-                              "max_features": [16, 20, 24] # This can't go above the total features.pr
-                              })
-
-rfc.best_params_ # {'max_features': 16, 'min_samples_split': 34, 'n_estimators': 500}
-rfc.best_score_ # -0.96243482043544049
-
-
-# Generally 10 min a fit
-'''
-abc = GridSearchCV(AdaBoostClassifier(), cv=4, verbose=2, n_jobs=-1, 
-                  param_grid={"n_estimators": [350],
-                              "learning_rate": [.1],
-                              "base_estimator": [DecisionTreeClassifier(max_depth=23),
-                                                 DecisionTreeClassifier(max_depth=25)
-                                                 ]
-                              })
-abc.best_params_
-'''
-
-''' This beat things bigger than it
-{'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=23,
-             max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
-             min_samples_split=2, min_weight_fraction_leaf=0.0,
-             presort=False, random_state=None, splitter='best'),
- 'learning_rate': 0.1,
- 'n_estimators': 350}
-
-abc.best_score_ # 0.68198875567296624
-'''
-
-etc = GridSearchCV(ExtraTreesClassifier(random_state=79), cv=4, verbose=2, n_jobs=-1,
-                  param_grid={"n_estimators": [600, 700],
-                              "max_features": [33], # This can't go above the total features
-                              "min_samples_split": [28, 30, 32],
-                              "bootstrap": [True]
-                              })
-                              
-etc.best_params_ # {'bootstrap': True, 'max_features': 33, 'min_samples_split': 30, 'n_estimators': 600}
-etc.best_score_ # 69279956648377705
-
-# This is pretty well dialed in
-# Update as of 1/12, hasn't been re-dialed in with separating age
-rfc = RandomForestClassifier(n_estimators=500, max_features=16, min_samples_split=34, random_state=79)
-abc = AdaBoostClassifier(DecisionTreeClassifier(max_depth=23), learning_rate=0.1, n_estimators=400)
-etc = ExtraTreesClassifier(min_samples_split=35, max_features=30, n_estimators=500, random_state=79)   
-
-'''
-rfc.fit(X, y)
-abc.fit(X, y)
-etc.fit(X, y)
-'''
-
-sorted(dict(zip(X.columns, rfc.feature_importances_)).items(), key=lambda x: x[1], reverse=True)
-sorted(dict(zip(X.columns, abc.feature_importances_)).items(), key=lambda x: x[1], reverse=True)
-sorted(dict(zip(X.columns, etc.feature_importances_)).items(), key=lambda x: x[1], reverse=True)
-
-# Consider using log proba here
-rfc_predictions = rfc.predict_proba(X_test)
-abc_predictions = abc.predict_proba(X_test)
-etc_predictions = etc.predict_proba(X_test)
 
 # Put these in a good form to spit out
-rfc_predictions = rfc_predictions.ravel()
-abc_predictions = abc_predictions.ravel()
-etc_predictions = etc_predictions.ravel()
+xgb_predictions = xgb_predictions.ravel()
+
 # Have to ensure these are in the same order, yep, looks good
-classes = np.tile(rfc.classes_, X_test.shape[0])
+classes = np.tile(xgb.classes_, X_test.shape[0])
 ids = np.repeat(test["id"].values, 12)
 
-print(rfc_predictions.shape)
-print(abc_predictions.shape)
-print(etc_predictions.shape)
+print(xgb_predictions.shape)
 print(classes.shape)
 print(ids.shape)
 print(test_users['id'].shape)
@@ -238,23 +212,10 @@ submission = pd.DataFrame()
 
 submission['id'] = np.concatenate((ids, missinguser_ids))
 submission['country'] = np.concatenate((classes, missingclasses))
-submission['rfc_prob'] = np.concatenate((rfc_predictions, missingclassvalues))
-submission['abc_prob'] = np.concatenate((abc_predictions, missingclassvalues))
-submission['etc_prob'] = np.concatenate((etc_predictions, missingclassvalues))
-submission['prob'] = submission['rfc_prob'] # + submission['etc_prob'] # Something very weird with abc
-
-submission['prob'] = submission['etc_prob']
+submission['xgb_prob'] = np.concatenate((xgb_predictions, missingclassvalues))
+submission['prob'] = submission['xgb_prob'] # + submission['etc_prob'] # Something very weird with abc
 
 submission = submission.sort_values(['id', 'prob'], ascending=[True, False])
-submission[['id', 'country']].to_csv('Data/airbnb_sessions_ensemble.csv', index=False)
+submission[['id', 'country']].to_csv('Data/airbnb_sessions_xgboost.csv', index=False)
 
 submission.shape
-
-# Next steps
-# Look through sessions data, see if I'm missing anything
-# Confusion matrix?
-# See where one model prefers something over another model
-# Test different techniques for the missing sessions data
-# Clean up some of the age stuff and other variables?
-
-
