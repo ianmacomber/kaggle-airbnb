@@ -157,24 +157,48 @@ def ndcg_score(ground_truth, predictions, k=5):
 # NDCG Scorer function
 ndcg_scorer = make_scorer(ndcg_score, needs_proba=True)
 
+'''
+GridSearchCV(cv=5, error_score='raise',
+       estimator=XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=1,
+       gamma=0, learning_rate=0.1, max_delta_step=0, max_depth=3,
+       min_child_weight=1, missing=None, n_estimators=100, nthread=-1,
+       objective='binary:logistic', reg_alpha=0, reg_lambda=1,
+       scale_pos_weight=1, seed=0, silent=True, subsample=1),
+       fit_params={}, iid=True, n_jobs=-1,
+       param_grid={'n_estimators': [25, 50], 'learning_rate': [0.1, 0.2], 'max_depth': [6, 20]},
+       pre_dispatch='2*n_jobs', refit=True,
+       scoring=make_scorer(ndcg_score, needs_proba=True), verbose=3)
+'''
+
 xgb = GridSearchCV(
-    XGBClassifier(),
+    XGBClassifier(seed=0, 
+    objective='multi:softprob'),
     param_grid={
-        'max_depth': [6, 20],
-        'n_estimators': [25, 50],
-        'learning_rate': [0.1, 0.2]
+        'max_depth': [5, 6],
+        'n_estimators': [27, 29],
+        'learning_rate': [0.1],
+        'subsample': [0.5, 0.6],
+        'colsample_bytree': [0.5, 0.6],
     },
     cv=5,
-    verbose=3,
+    verbose=4,
     n_jobs=-1,
     #scoring=make_scorer(ndcg_scorer)
     scoring=ndcg_scorer
     )
 
-xgb.best_params_ # {{'learning_rate': 0.1, 'max_depth': 6, 'n_estimators': 25}
-xgb.best_score_ # 0.84468693734080902
+xgb.best_params_ 
+'''
+{'colsample_bytree': 0.5,
+ 'learning_rate': 0.1,
+ 'max_depth': 5,
+ 'n_estimators': 27,
+ 'subsample': 0.5}
+'''
 
-xgb = XGBClassifier(max_depth=6, learning_rate=0.3, n_estimators=25,
+xgb.best_score_ # 0.85039921502395122
+
+xgb = XGBClassifier(max_depth=6, learning_rate=0.1, n_estimators=27,
                     objective='multi:softprob', subsample=0.5, colsample_bytree=0.5, seed=0)  
 
 xgb.fit(X, y)

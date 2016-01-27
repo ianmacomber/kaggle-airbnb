@@ -31,11 +31,13 @@ Only using the subset of training data that has corresponding session level data
 
 Score of 0.85620 using random tree classifiers for the entire data set (no session level)
 
+Score of ~~0.87660~~ 0.87631 on xgboost with training data that has corresponding session level data.
+
 ## To-do
 
 * ~~Incorporate a model that doesn't use session level data, so I can use the whole training set~~
-* Try to cross validate using NDCG as a score.  Currently using default score.
-* ~~Check out xgboost~~.
+* ~~Try to cross validate using NDCG as a score.  Currently using default score.~~
+* ~~Check out xgboost~~
 * Look at other classification methods (SVC, KNN)
 * Improve feature engineering, especially of session-level data
 * Investigate seasonal trends.  Test set is only July-Sept.
