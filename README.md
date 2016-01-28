@@ -48,3 +48,5 @@ Score of ~~0.87660~~ 0.87631 on xgboost with training data that has correspondin
 We don't really care if a model does a good job of predicting non-session data, we are only prediction on session data.
 * Combine old data with new data using left outer join instead of inner, then setting to min?
 * ~~Investigate log-loss as a score?~~
+* Tune XGBoost with standard methods, deal with NA's, restrict features
+* Test a model that uses all available data and treats missing sessions as -1

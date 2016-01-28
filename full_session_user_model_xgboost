@@ -81,12 +81,14 @@ session_aggregates['min_visit_seq_action_detail_book_it'] = session_aggregates['
 session_aggregates['min_total_secs_elapsed_action_detail_book_it'] = session_aggregates['min_total_secs_elapsed_action_detail_book_it'].fillna(-1).astype(int)
 
 # There are some things in the test group that are not in the session aggregates
-train = pd.merge(train_users, session_aggregates, how="inner", left_on=["id"], right_on=["user_id"])
-test = pd.merge(test_users, session_aggregates, how="inner", left_on=["id"], right_on=["user_id"])
+train = pd.merge(train_users, session_aggregates, how="left", left_on=["id"], right_on=["user_id"])
+test = pd.merge(test_users, session_aggregates, how="left", left_on=["id"], right_on=["user_id"])
+
+# We would like our validation set to be only items that have session data.
 
 print(test.shape) # (61668, 64)
 print(test_users.shape) # (62096, 17)
-print(train.shape) # (73815, 65)
+print(train.shape) # (213451, 65)
 print(train_users.shape) # (213451, 18)
 
 collist = list(train.columns.values)
@@ -112,7 +114,8 @@ X = train[collist]
 y = train['country_destination']
 X_test = test[collist]
 
-# X_test.fillna(-1) # Definitely take more looks at this later
+X_test.fillna(-1) # Definitely take more looks at this later
+X.fillna(-1)      # Take a look at this later
 
 for f in X.columns:
     if X[f].dtype=='object':
@@ -175,13 +178,13 @@ xgb = GridSearchCV(
     objective='multi:softprob'
     ),
     param_grid={
-        'max_depth': [4, 5, 6],
+        'max_depth': [5, 6],
         'n_estimators': [27, 29],
         'learning_rate': [0.1],
         'subsample': [0.5, 0.6],
         'colsample_bytree': [0.5, 0.6]
     },
-    cv=6,
+    cv=5,
     verbose=4,
     n_jobs=-1,
     #scoring=make_scorer(ndcg_scorer)
@@ -204,8 +207,6 @@ xgb = XGBClassifier(max_depth=6, learning_rate=0.1, n_estimators=27,
 
 xgb.fit(X, y)
 xgb_predictions = xgb.predict_proba(X_test)
-
-
 
 # Put these in a good form to spit out
 xgb_predictions = xgb_predictions.ravel()
