@@ -175,13 +175,14 @@ xgb = GridSearchCV(
     objective='multi:softprob'
     ),
     param_grid={
-        'max_depth': [4, 5, 6],
-        'n_estimators': [27, 29],
+        'max_depth': [5, 6],
+        'n_estimators': [26, 27, 28],
         'learning_rate': [0.1],
-        'subsample': [0.5, 0.6],
-        'colsample_bytree': [0.5, 0.6]
+        'subsample': [0.4, 0.5],
+        'colsample_bytree': [0.5],
+        'gamma': [0.1, 0.15]
     },
-    cv=6,
+    cv=5,
     verbose=4,
     n_jobs=-1,
     #scoring=make_scorer(ndcg_scorer)
@@ -191,21 +192,20 @@ xgb = GridSearchCV(
 xgb.best_params_ 
 '''
 {'colsample_bytree': 0.5,
+ 'gamma': 0.1,
  'learning_rate': 0.1,
  'max_depth': 5,
- 'n_estimators': 27,
- 'subsample': 0.5}
+ 'n_estimators': 26,
+ 'subsample': 0.4}
 '''
 
-xgb.best_score_ # 0.85039921502395122
+xgb.best_score_ # 0.85076008421366189
 
 xgb = XGBClassifier(max_depth=6, learning_rate=0.1, n_estimators=27,
-                    objective='multi:softprob', subsample=0.5, colsample_bytree=0.5, seed=0)  
+                    objective='multi:softprob', subsample=0.5, colsample_bytree=0.5, gamma=0.1, seed=0)  
 
 xgb.fit(X, y)
 xgb_predictions = xgb.predict_proba(X_test)
-
-
 
 # Put these in a good form to spit out
 xgb_predictions = xgb_predictions.ravel()

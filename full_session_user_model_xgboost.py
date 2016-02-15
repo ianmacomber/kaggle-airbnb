@@ -179,10 +179,12 @@ xgb = GridSearchCV(
     ),
     param_grid={
         'max_depth': [5, 6],
-        'n_estimators': [27, 29],
+        'n_estimators': [26,27],
         'learning_rate': [0.1],
-        'subsample': [0.5, 0.6],
-        'colsample_bytree': [0.5, 0.6]
+        'subsample': [0.45],
+        'colsample_bytree': [0.5],
+        'gamma': [0.1, 0.15],
+        'max_delta_step': [0]
     },
     cv=5,
     verbose=4,
@@ -191,19 +193,25 @@ xgb = GridSearchCV(
     scoring=ndcg_scorer
     )
 
+# currently - just added gamma to this thing.
+# should test it here, should test it on the non-full user model
+# then eventually merge these things in 
+
 xgb.best_params_ 
 '''
 {'colsample_bytree': 0.5,
+ 'gamma': 0.15,
  'learning_rate': 0.1,
- 'max_depth': 5,
+ 'max_delta_step': 0,
+ 'max_depth': 6,
  'n_estimators': 27,
- 'subsample': 0.5}
+ 'subsample': 0.45}
 '''
 
-xgb.best_score_ # 0.85039921502395122
+xgb.best_score_ # 0.83585339132974634
 
 xgb = XGBClassifier(max_depth=6, learning_rate=0.1, n_estimators=27,
-                    objective='multi:softprob', subsample=0.5, colsample_bytree=0.5, seed=0)  
+                    objective='multi:softprob', subsample=0.4, colsample_bytree=0.5, seed=0)  
 
 xgb.fit(X, y)
 xgb_predictions = xgb.predict_proba(X_test)
@@ -222,24 +230,13 @@ print(test_users['id'].shape)
 print(test['id'].shape)
 
 # We want to make this a list of most likely occurances
-missingusers = test_users['id'][~test_users['id'].isin(test['id'])]
-missingclasses = np.array(['NDF', 'US', 'other', 'FR', 'IT'])
-missingclassvalues = np.array([5, 4, 3, 2, 1])
-
-missinguser_ids = np.repeat(missingusers.values, 5)
-missingclasses = np.tile(missingclasses, missingusers.shape[0])
-missingclassvalues = np.tile(missingclassvalues, missingusers.shape[0])
-
-print(missinguser_ids.shape)
-print(missingclasses.shape)
-print(missingclassvalues.shape)
 
 submission = pd.DataFrame()
 
-submission['id'] = np.concatenate((ids, missinguser_ids))
-submission['country'] = np.concatenate((classes, missingclasses))
-submission['xgb_prob'] = np.concatenate((xgb_predictions, missingclassvalues))
-submission['prob'] = submission['xgb_prob'] # + submission['etc_prob'] # Something very weird with abc
+submission['id'] = ids
+submission['country'] = classes
+submission['xgb_prob'] = xgb_predictions
+submission['prob'] = submission['xgb_prob']
 
 submission = submission.sort_values(['id', 'prob'], ascending=[True, False])
 submission[['id', 'country']].to_csv('Data/airbnb_sessions_xgboost.csv', index=False)

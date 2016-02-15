@@ -4,6 +4,8 @@ This is a code repo for the [Airbnb Kaggle Competition](https://www.kaggle.com/c
 
 In this recruiting competition, Airbnb challenges you to predict in which country a new user will make his or her first booking.
 
+Update as of contest end: wound up finishing 231st out of 1,463 (top 25%).  Leader's private score was 0.88697, mine was 0.88342.
+
 ## Airbnb File Descriptions
 
 These files can be found through the website and are stored in a `/Data` folder that is not committed to git.
